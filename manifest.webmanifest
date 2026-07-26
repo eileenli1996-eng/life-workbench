@@ -1,0 +1,14 @@
+{
+  "name": "人生管理工作台",
+  "short_name": "人生管理",
+  "description": "年/月/日计划、项目分解、复盘、习惯打卡、健康与影音记录",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f7f6",
+  "theme_color": "#2f9e8f",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

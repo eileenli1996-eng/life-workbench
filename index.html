@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人生管理工作台</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f9e8f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="人生管理">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<style>
+  :root{
+    --bg:#f5f7f6; --panel:#ffffff; --ink:#1f2a28; --muted:#6b7b78;
+    --line:#e6ebe9; --accent:#2f9e8f; --accent-soft:#e3f3ef; --accent-2:#3b7ddd;
+    --warn:#e08a3c; --good:#3aa657; --bad:#d9534f; --shadow:0 1px 3px rgba(20,40,35,.08),0 4px 14px rgba(20,40,35,.06);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--ink); font-size:14px; line-height:1.5;}
+  .app{display:flex; min-height:100vh}
+  /* Sidebar */
+  .sidebar{width:218px; background:var(--panel); border-right:1px solid var(--line); padding:18px 12px; position:sticky; top:0; height:100vh; overflow:auto}
+  .brand{display:flex; align-items:center; gap:9px; font-weight:700; font-size:16px; margin:4px 6px 16px}
+  .brand .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#57c2b3);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px}
+  .nav-item{display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:10px; color:var(--muted); cursor:pointer; margin-bottom:3px; font-weight:500; user-select:none}
+  .nav-item:hover{background:var(--bg)}
+  .nav-item.active{background:var(--accent-soft); color:var(--accent); font-weight:600}
+  .nav-item .ico{width:18px; text-align:center}
+  .nav-sep{height:1px;background:var(--line);margin:12px 6px}
+  .side-foot{margin-top:14px; font-size:11px; color:var(--muted); padding:0 6px}
+  .side-foot button{display:block;width:100%;text-align:left;background:none;border:1px solid var(--line);border-radius:8px;padding:7px 9px;margin-top:7px;color:var(--muted);cursor:pointer;font-size:12px}
+  .side-foot button:hover{border-color:var(--accent);color:var(--accent)}
+  /* Main */
+  .main{flex:1; padding:22px 28px 60px; max-width:1100px}
+  .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px}
+  .topbar h1{font-size:21px; margin:0}
+  .topbar .sub{color:var(--muted); font-size:13px; margin-top:2px}
+  .datepick{display:flex; align-items:center; gap:8px}
+  input[type=date],input[type=month],input[type=text],select,textarea{
+    font:inherit; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:9px; padding:7px 10px; outline:none}
+  input[type=date],input[type=month]{padding:6px 8px}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  button.btn{background:var(--accent); color:#fff; border:none; border-radius:9px; padding:8px 14px; cursor:pointer; font-weight:600; font-size:13px}
+  button.btn:hover{filter:brightness(1.05)}
+  button.btn.ghost{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  button.btn.sm{padding:5px 10px;font-size:12px;border-radius:8px}
+  /* Cards / layout */
+  .grid{display:grid; gap:16px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:880px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow)}
+  .card h3{margin:0 0 12px; font-size:15px; display:flex; align-items:center; gap:8px}
+  .card h3 .meta{margin-left:auto; font-weight:500; font-size:12px; color:var(--muted)}
+  /* Tabs */
+  .tabs{display:flex; gap:6px; margin-bottom:16px; background:#fff; border:1px solid var(--line); border-radius:11px; padding:4px; width:fit-content}
+  .tab{padding:7px 16px; border-radius:8px; cursor:pointer; color:var(--muted); font-weight:600; font-size:13px}
+  .tab.active{background:var(--accent); color:#fff}
+  /* List items */
+  .item{display:flex; align-items:flex-start; gap:10px; padding:9px 4px; border-bottom:1px dashed var(--line)}
+  .item:last-child{border-bottom:none}
+  .item .txt{flex:1; word-break:break-word}
+  .item.done .txt{color:var(--muted); text-decoration:line-through}
+  .item .ops{display:flex; gap:6px; opacity:0; transition:.15s}
+  .item:hover .ops{opacity:1}
+  .iconbtn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:15px;padding:2px 5px;border-radius:6px}
+  .iconbtn:hover{background:var(--bg);color:var(--bad)}
+  .addrow{display:flex; gap:8px; margin-top:10px}
+  .addrow input{flex:1}
+  .empty{color:var(--muted); font-size:13px; padding:10px 2px; font-style:italic}
+  /* progress */
+  .bar{height:8px; background:var(--bg); border-radius:6px; overflow:hidden}
+  .bar > span{display:block; height:100%; background:linear-gradient(90deg,var(--accent),#57c2b3); border-radius:6px; transition:width .3s}
+  .pill{display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600}
+  .pill.green{background:var(--accent-soft); color:var(--accent)}
+  .pill.gray{background:var(--bg); color:var(--muted)}
+  .pill.blue{background:#e7f0fd; color:var(--accent-2)}
+  .pill.warn{background:#fbeede; color:var(--warn)}
+  /* stat */
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow)}
+  .stat .num{font-size:26px; font-weight:700; line-height:1}
+  .stat .lbl{color:var(--muted); font-size:12px; margin-top:6px}
+  .stat .sub{font-size:12px; margin-top:6px}
+  /* heatmap */
+  .heat{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:8px}
+  .heat .cell{aspect-ratio:1; border-radius:6px; background:var(--bg); display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--muted); cursor:pointer; position:relative}
+  .heat .cell.h0{background:#eef1f0}
+  .heat .cell.h1{background:#cfe9e3}
+  .heat .cell.h2{background:#9fd6cb}
+  .heat .cell.h3{background:#5fb6a7}
+  .heat .cell.h4{background:#2f9e8f; color:#fff}
+  .heat .cell.sel{outline:2px solid var(--accent-2)}
+  .heat .cell .g{position:absolute; bottom:2px; right:3px; font-size:9px; font-weight:700}
+  /* tree */
+  .tree .node{display:flex; align-items:center; gap:9px; padding:7px 4px}
+  .tree .node .txt{flex:1; word-break:break-word}
+  .tree .node.done .txt{color:var(--muted); text-decoration:line-through}
+  .tree .children{margin-left:22px; border-left:2px solid var(--line); padding-left:12px}
+  .proj{display:flex; align-items:center; gap:10px; padding:11px 12px; border:1px solid var(--line); border-radius:11px; margin-bottom:9px; cursor:pointer; background:#fff}
+  .proj:hover{border-color:var(--accent)}
+  .proj .name{font-weight:600; flex:1}
+  .meal,.pod{display:flex; align-items:center; gap:8px; padding:8px 4px; border-bottom:1px dashed var(--line)}
+  .meal:last-child,.pod:last-child{border-bottom:none}
+  textarea{width:100%; resize:vertical; min-height:90px}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .row > *{margin:0}
+  .hint{color:var(--muted); font-size:12px; margin-top:6px}
+  label.fl{display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted)}
+  .tag{display:inline-block; padding:1px 7px; border-radius:6px; background:var(--bg); color:var(--muted); font-size:11px; margin-left:6px}
+  .stars{color:#e0a93c; letter-spacing:1px}
+  a.lnk{color:var(--accent-2);text-decoration:none}
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1f2a28; color:#fff; padding:10px 18px; border-radius:10px; font-size:13px; opacity:0; transition:.25s; pointer-events:none; z-index:99}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">生</div><span>人生管理工作台</span></div>
+    <div class="nav-item" data-view="dashboard"><span class="ico">📊</span>仪表盘</div>
+    <div class="nav-item" data-view="plan"><span class="ico">🗓️</span>年/月/日计划</div>
+    <div class="nav-item" data-view="project"><span class="ico">🚀</span>项目分解</div>
+    <div class="nav-item" data-view="review"><span class="ico">🔍</span>年/月/日复盘</div>
+    <div class="nav-item" data-view="habit"><span class="ico">✅</span>习惯打卡</div>
+    <div class="nav-item" data-view="health"><span class="ico">🌿</span>健康记录</div>
+    <div class="nav-item" data-view="media"><span class="ico">🎧</span>影音记录</div>
+    <div class="nav-item" data-view="sync"><span class="ico">☁</span>同步设置</div>
+    <div class="nav-sep"></div>
+    <div class="side-foot">
+      数据保存在本机浏览器（localStorage），不上传云端。建议定期导出备份。
+      <button data-action="export">⬇ 导出备份 JSON</button>
+      <button data-action="import">⬆ 导入备份 JSON</button>
+      <button data-action="clear">🗑 清空全部数据</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">仪表盘</h1>
+        <div class="sub" id="pageSub"></div>
+      </div>
+      <div class="datepick" id="datePick"></div>
+    </div>
+    <div id="app"></div>
+  </main>
+</div>
+<input type="file" id="importFile" accept="application/json" style="display:none">
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ---------- helpers ---------- */
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const uid = ()=> Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1800);}
+function today(){const d=new Date();return d.toISOString().slice(0,10);}
+function thisMonth(){return today().slice(0,7);}
+function thisYear(){return today().slice(0,4);}
+function ymd(d){return d.toISOString().slice(0,10);}
+function addDays(dateStr,n){const d=new Date(dateStr+'T00:00:00');d.setDate(d.getDate()+n);return ymd(d);}
+function monthDays(monthStr){const [y,m]=monthStr.split('-').map(Number);const d=new Date(y,m,0);return d.getDate();}
+function daysInMonthGrid(monthStr){ // returns array of Date for calendar grid (incl leading blanks)
+  const [y,m]=monthStr.split('-').map(Number);
+  const first=new Date(y,m-1,1); const startDow=first.getDay();
+  const total=monthDays(monthStr);
+  const arr=[];
+  for(let i=0;i<startDow;i++) arr.push(null);
+  for(let d=1;d<=total;d++) arr.push(new Date(y,m-1,d));
+  return arr;
+}
+/* ---------- storage ---------- */
+const DB={
+  get(k,def){try{const v=localStorage.getItem('lmw:'+k);return v?JSON.parse(v):def;}catch(e){return def;}},
+  set(k,v){localStorage.setItem('lmw:'+k,JSON.stringify(v)); scheduleSync();}
+};
+/* data buckets */
+const YearPlans=()=>DB.get('yearPlans',{});       // {year:[{id,text,done}]}
+const MonthPlans=()=>DB.get('monthPlans',{});     // {month:[...]}
+const DayPlans=()=>DB.get('dayPlans',{});         // {date:[...]}
+const Projects=()=>DB.get('projects',[]);
+const Reviews=()=>DB.get('reviews',{});           // {key:text}
+const Habits=()=>DB.get('habits',{defs:[],records:{}}); // {defs:[{id,name,emoji}],records:{date:{hid:1}}}
+const Health=()=>DB.get('health',{});             // {date:{sleep,meals:[],poop:[]}}
+const Media=()=>DB.get('media',{});               // {month:{podcasts:[],shows:[]}}
+
+/* ---------- state ---------- */
+const state={view:'dashboard', planSub:'day', reviewSub:'day', date:today(), month:thisMonth(), year:thisYear(), habitDate:today(), heatMonth:thisMonth()};
+const NAV={dashboard:'仪表盘',plan:'年 / 月 / 日计划',project:'项目计划分解',review:'年 / 月 / 日复盘',habit:'每日习惯打卡',health:'每日健康记录',media:'每月播客及影音剧记录',sync:'同步设置'};
+
+/* ---------- render router ---------- */
+function render(){
+  $$('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===state.view));
+  $('#pageTitle').textContent=NAV[state.view]||'';
+  // date picker area
+  const dp=$('#datePick'); dp.innerHTML='';
+  if(state.view==='plan'&&state.planSub==='day'||state.view==='review'&&state.reviewSub==='day'||state.view==='health'||state.view==='habit'){
+    // day picker for some
+  }
+  let sub='';
+  if(state.view==='plan'){ sub=planView(); }
+  else if(state.view==='project'){ sub=projectView(); }
+  else if(state.view==='review'){ sub=reviewView(); }
+  else if(state.view==='habit'){ sub=habitView(); }
+  else if(state.view==='health'){ sub=healthView(); }
+  else if(state.view==='media'){ sub=mediaView(); }
+  else if(state.view==='sync'){ sub=syncView(); }
+  else { sub=dashboardView(); }
+  $('#app').innerHTML=sub;
+  $('#pageSub').textContent=subTitle();
+  // attach date pickers where needed
+  if(state.view==='plan'&&state.planSub==='year') setPicker('year',state.year,v=>{state.year=v;render();});
+  if(state.view==='plan'&&state.planSub==='month') setPicker('month',state.month,v=>{state.month=v;render();});
+  if(state.view==='plan'&&state.planSub==='day') setPicker('date',state.date,v=>{state.date=v;render();});
+  if(state.view==='review'&&state.reviewSub==='year') setPicker('year',state.year,v=>{state.year=v;render();});
+  if(state.view==='review'&&state.reviewSub==='month') setPicker('month',state.month,v=>{state.month=v;render();});
+  if(state.view==='review'&&state.reviewSub==='day') setPicker('date',state.date,v=>{state.date=v;render();});
+  if(state.view==='health') setPicker('date',state.date,v=>{state.date=v;render();});
+  if(state.view==='habit') setPicker('date',state.habitDate,v=>{state.habitDate=v;render();});
+  if(state.view==='media') setPicker('month',state.month,v=>{state.month=v;render();});
+}
+function setPicker(kind,val,cb){
+  const dp=$('#datePick');
+  const inp=document.createElement('input');
+  inp.type=(kind==='month'?'month':'date');
+  inp.value=val;
+  inp.addEventListener('change',()=>cb(inp.value));
+  dp.appendChild(inp);
+}
+function subTitle(){
+  switch(state.view){
+    case 'plan': return state.planSub==='year'?('年份 '+state.year):state.planSub==='month'?('月份 '+state.month):('日期 '+state.date);
+    case 'review': return state.reviewSub==='year'?('年份 '+state.year):state.reviewSub==='month'?('月份 '+state.month):('日期 '+state.date);
+    case 'health': return '日期 '+state.date;
+    case 'habit': return '打卡日期 '+state.habitDate;
+    case 'media': return '月份 '+state.month;
+    default: return '今日 '+today();
+  }
+}
+
+/* ---------- dashboard ---------- */
+function dashboardView(){
+  const d=today();
+  const dp=DayPlans()[d]||[]; const dpDone=dp.filter(t=>t.done).length;
+  const hp=Habits(); const hr=hp.records[d]||{}; const hDone=hp.defs.filter(h=>hr[h.id]).length;
+  const mp=MonthPlans()[state.month]||[]; const mpDone=mp.filter(t=>t.done).length;
+  const yp=YearPlans()[state.year]||[]; const ypDone=yp.filter(t=>t.done).length;
+  const md=Media()[state.month]||{podcasts:[],shows:[]};
+  const mediaN=(md.podcasts?md.podcasts.length:0)+(md.shows?md.shows.length:0);
+  const projs=Projects();
+  let projDone=0,projTot=0; projs.forEach(p=>{const r=projProgress(p.tasks||[]);projDone+=r.done;projTot+=r.tot;});
+  const cards=`
+  <div class="grid g4">
+    <div class="stat"><div class="num">${dpDone}/${dp.length}</div><div class="lbl">今日待办</div>${dp.length?'<div class="sub"><div class="bar"><span style="width:'+(dpDone/dp.length*100)+'%"></span></div></div>':''}</div>
+    <div class="stat"><div class="num">${hDone}/${hp.defs.length}</div><div class="lbl">今日习惯</div>${hp.defs.length?'<div class="sub"><div class="bar"><span style="width:'+(hp.defs.length?hDone/hp.defs.length*100:0)+'%"></span></div></div>':''}</div>
+    <div class="stat"><div class="num">${mediaN}</div><div class="lbl">本月影音</div><div class="sub"><span class="pill green">${md.podcasts?md.podcasts.length:0} 播客</span> <span class="pill blue">${md.shows?md.shows.length:0} 剧综</span></div></div>
+    <div class="stat"><div class="num">${projTot?Math.round(projDone/projTot*100):0}%</div><div class="lbl">项目总进度</div><div class="sub">${projTot} 项任务 · ${projs.length} 个项目</div></div>
+  </div>`;
+  const upcoming = dp.filter(t=>!t.done).slice(0,6);
+  const dash=`
+  ${cards}
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>📅 今日计划 <span class="meta">${d}</span></h3>
+      ${upcoming.length?upcoming.map(t=>`<div class="item"><span class="txt">${esc(t.text)}</span></div>`).join(''):'<div class="empty">还没有待办，去「年/月/日计划 → 日」添加吧</div>'}
+      <div class="addrow"><a class="lnk" data-view="plan" style="cursor:pointer" onclick="state.planSub='day';state.date=today();render();return false;">查看全部 →</a></div>
+    </div>
+    <div class="card">
+      <h3>🎯 年度目标进度 <span class="meta">${state.year}</span></h3>
+      ${yp.length?`<div class="bar" style="margin-bottom:8px"><span style="width:${yp.length?ypDone/yp.length*100:0}%"></span></div>
+        ${yp.map(t=>`<div class="item ${t.done?'done':''}"><span class="txt">${esc(t.text)}</span></div>`).join('')}`
+        :'<div class="empty">暂无年度目标</div>'}
+    </div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h3>🚀 进行中的项目</h3>
+      ${projs.length?projs.slice(0,5).map(p=>{const r=projProgress(p.tasks||[]);return `<div class="proj" data-action="open-proj" data-id="${p.id}"><span class="name">${esc(p.name)}</span><span class="pill ${r.tot? (r.done===r.tot?'green':'gray'):'gray'}">${r.done}/${r.tot}</span></div>`;}).join(''):'<div class="empty">还没有项目，去「项目分解」创建</div>'}
+    </div>
+    <div class="card">
+      <h3>✍️ 今日一句复盘</h3>
+      <textarea data-store="review" data-key="D${d}" placeholder="今天最值得记录的一件事 / 一个感悟…">${esc(Reviews()['D'+d]||'')}</textarea>
+      <div class="hint">完整复盘请在「年/月/日复盘 → 日」中填写</div>
+    </div>
+  </div>`;
+  return dash;
+}
+
+/* ---------- plan view ---------- */
+function planView(){
+  const tabs=`<div class="tabs"><div class="tab ${state.planSub==='year'?'active':''}" data-action="plan-sub" data-sub="year">年计划</div>
+    <div class="tab ${state.planSub==='month'?'active':''}" data-action="plan-sub" data-sub="month">月计划</div>
+    <div class="tab ${state.planSub==='day'?'active':''}" data-action="plan-sub" data-sub="day">日计划</div></div>`;
+  if(state.planSub==='year') return tabs+goalCard('year',state.year,'年度目标',YearPlans(),'年');
+  if(state.planSub==='month') return tabs+goalCard('month',state.month,'月度目标',MonthPlans(),'月');
+  return tabs+goalCard('day',state.date,'每日待办',DayPlans(),'日');
+}
+function goalCard(type,key,title,bucket,unit){
+  let arr=bucket[key]||[];
+  const done=arr.filter(t=>t.done).length;
+  return `<div class="card">
+    <h3>${title}（${unit}）<span class="meta">${done}/${arr.length} 完成</span></h3>
+    <div class="bar" style="margin-bottom:12px"><span style="width:${arr.length?done/arr.length*100:0}%"></span></div>
+    ${arr.length?arr.map(t=>`<div class="item ${t.done?'done':''}">
+        <input type="checkbox" ${t.done?'checked':''} data-action="toggle" data-type="${type}" data-key="${key}" data-id="${t.id}">
+        <span class="txt">${esc(t.text)}</span>
+        <span class="ops"><button class="iconbtn" data-action="del" data-type="${type}" data-key="${key}" data-id="${t.id}" title="删除">🗑</button></span>
+      </div>`).join(''):'<div class="empty">还没有内容，添加一条吧</div>'}
+    <div class="addrow">
+      <input type="text" id="new-${type}-${key}" placeholder="添加${title}…" onkeydown="if(event.key==='Enter')addGoal('${type}','${key}')">
+      <button class="btn sm" data-action="add" data-type="${type}" data-key="${key}">添加</button>
+    </div>
+  </div>`;
+}
+function addGoal(type,key){
+  const inp=$('#new-'+type+'-'+key); const v=inp.value.trim(); if(!v)return;
+  const buckets={year:YearPlans(),month:MonthPlans(),day:DayPlans()};
+  const b=buckets[type]; (b[key]=b[key]||[]).push({id:uid(),text:v,done:false});
+  DB.set(type==='year'?'yearPlans':type==='month'?'monthPlans':'dayPlans',b);
+  render();
+}
+function toggleGoal(type,key,id){
+  const buckets={year:YearPlans(),month:MonthPlans(),day:DayPlans()};
+  const b=buckets[type]; const it=(b[key]||[]).find(t=>t.id===id); if(it)it.done=!it.done;
+  DB.set(type==='year'?'yearPlans':type==='month'?'monthPlans':'dayPlans',b);
+  render();
+}
+function delGoal(type,key,id){
+  const buckets={year:YearPlans(),month:MonthPlans(),day:DayPlans()};
+  const b=buckets[type]; b[key]=(b[key]||[]).filter(t=>t.id!==id);
+  DB.set(type==='year'?'yearPlans':type==='month'?'monthPlans':'dayPlans',b);
+  render();
+}
+
+/* ---------- project view ---------- */
+function projProgress(tasks){
+  let done=0,tot=0;
+  (tasks||[]).forEach(t=>{tot++; if(t.done)done++; const r=projProgress(t.children); done+=r.done; tot+=r.tot;});
+  return {done,tot};
+}
+function findTask(tasks,id){for(const t of (tasks||[])){if(t.id===id)return t; const f=findTask(t.children,id); if(f)return f;}return null;}
+function removeTask(tasks,id){for(let i=0;i<tasks.length;i++){if(tasks[i].id===id){tasks.splice(i,1);return true;}if(removeTask(tasks[i].children,id))return true;}return false;}
+function projectView(){
+  const projs=Projects();
+  const list=projs.map(p=>{
+    const r=projProgress(p.tasks||[]);
+    const statusPill=p.status==='done'?'<span class="pill green">已完成</span>':p.status==='hold'?'<span class="pill warn">搁置</span>':'<span class="pill gray">进行中</span>';
+    const open=state._openProj===p.id;
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="proj" style="margin:0;border:none;padding:0;cursor:default">
+        <span class="name" data-action="open-proj" data-id="${p.id}" style="cursor:pointer">${esc(p.name)}</span>
+        ${statusPill}
+        <span class="meta">${r.done}/${r.tot}</span>
+      </div>
+      <div class="bar" style="margin:6px 0 10px"><span style="width:${r.tot?r.done/r.tot*100:0}%"></span></div>
+      ${open?projectDetail(p):`<div class="hint" data-action="open-proj" data-id="${p.id}" style="cursor:pointer">点击展开任务分解 →</div>`}
+    </div>`;
+  }).join('') || '<div class="empty">还没有项目，创建你的第一个吧</div>';
+  return `<div class="grid g2">
+    <div>
+      ${list}
+      <div class="card">
+        <h3>➕ 新建项目</h3>
+        <div class="addrow"><input type="text" id="new-proj" placeholder="项目名称，如：备考雅思"><button class="btn sm" data-action="add-proj">创建</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>💡 使用说明</h3>
+      <p class="hint">项目支持<strong>无限层级分解</strong>：每个任务都可继续拆成子任务，直到可执行的最小单元。进度条自动统计所有层级的完成比例。</p>
+      <p class="hint">建议：先用「年/月计划」定方向，再用「项目分解」把大目标拆成可执行的行动。</p>
+    </div>
+  </div>`;
+}
+function projectDetail(p){
+  const tasksHtml = (p.tasks||[]).map(t=>renderNode(t,0,p.id)).join('') || '<div class="empty">还没有任务，添加第一条吧</div>';
+  return `<div style="margin-top:4px">
+    <label class="fl">项目描述 / 目标
+      <textarea data-store="proj-desc" data-id="${p.id}" style="min-height:60px">${esc(p.desc||'')}</textarea>
+    </label>
+    <div class="row" style="margin:10px 0">
+      <span class="hint">状态：</span>
+      <select data-store="proj-status" data-id="${p.id}">
+        <option value="doing" ${p.status!=='done'&&p.status!=='hold'?'selected':''}>进行中</option>
+        <option value="done" ${p.status==='done'?'selected':''}>已完成</option>
+        <option value="hold" ${p.status==='hold'?'selected':''}>搁置</option>
+      </select>
+    </div>
+    <div class="tree">${tasksHtml}</div>
+    <div class="addrow"><input type="text" id="new-task-${p.id}" placeholder="添加任务…" onkeydown="if(event.key==='Enter')addTask('${p.id}',null)">
+      <button class="btn sm" data-action="add-task" data-pid="${p.id}" data-parent="">添加</button></div>
+  </div>`;
+}
+function renderNode(t,depth,pid){
+  const kids=(t.children||[]).map(c=>renderNode(c,depth+1,pid)).join('');
+  return `<div class="node ${t.done?'done':''}">
+    <input type="checkbox" ${t.done?'checked':''} data-action="toggle-task" data-pid="${pid}" data-id="${t.id}">
+    <span class="txt">${esc(t.text)}</span>
+    <span class="ops">
+      <button class="iconbtn" data-action="add-sub" data-pid="${pid}" data-id="${t.id}" title="添加子任务">＋</button>
+      <button class="iconbtn" data-action="del-task" data-pid="${pid}" data-id="${t.id}" title="删除">🗑</button>
+    </span>
+  </div>${kids?`<div class="children">${kids}</div>`:''}`;
+}
+function addTask(pid,parentId){
+  const inp=$('#new-task-'+pid); const v=inp.value.trim(); if(!v)return;
+  const projs=Projects(); const p=projs.find(x=>x.id===pid);
+  const task={id:uid(),text:v,done:false,children:[]};
+  if(parentId){ const par=findTask(p.tasks,parentId); (par.children=par.children||[]).push(task); }
+  else { (p.tasks=p.tasks||[]).push(task); }
+  DB.set('projects',projs); render();
+}
+function toggleTask(pid,id){const projs=Projects();const p=projs.find(x=>x.id===pid);const t=findTask(p.tasks,id);if(t)t.done=!t.done;DB.set('projects',projs);render();}
+function delTask(pid,id){const projs=Projects();const p=projs.find(x=>x.id===pid);removeTask(p.tasks,id);DB.set('projects',projs);render();}
+function addProject(){const inp=$('#new-proj');const v=inp.value.trim();if(!v)return;const projs=Projects();projs.push({id:uid(),name:v,desc:'',status:'doing',tasks:[]});DB.set('projects',projs);render();}
+
+/* ---------- review view ---------- */
+function reviewView(){
+  const tabs=`<div class="tabs"><div class="tab ${state.reviewSub==='year'?'active':''}" data-action="review-sub" data-sub="year">年复盘</div>
+    <div class="tab ${state.reviewSub==='month'?'active':''}" data-action="review-sub" data-sub="month">月复盘</div>
+    <div class="tab ${state.reviewSub==='day'?'active':''}" data-action="review-sub" data-sub="day">日复盘</div></div>`;
+  let key,label;
+  if(state.reviewSub==='year'){key='Y'+state.year;label='年度复盘 · '+state.year;}
+  else if(state.reviewSub==='month'){key='M'+state.month;label='月度复盘 · '+state.month;}
+  else {key='D'+state.date;label='每日复盘 · '+state.date;}
+  const val=Reviews()[key]||'';
+  const prompts = state.reviewSub==='day'
+    ? ['今天完成了什么？','今天遇到了什么卡点？','明天最重要的是什么？','今天的一个小确幸']
+    : state.reviewSub==='month'
+    ? ['本月目标达成情况','本月最大收获','本月待改进','下月重点']
+    : ['今年三大成就','今年踩过的坑','今年最大的成长','明年最想做的三件事'];
+  return tabs+`<div class="card">
+    <h3>✍️ ${label}</h3>
+    <textarea data-store="review" data-key="${key}" style="min-height:240px">${esc(val)}</textarea>
+    <div class="hint">参考维度（可自由发挥）：${prompts.map(p=>'· '+p).join('　')}</div>
+  </div>`;
+}
+
+/* ---------- habit view ---------- */
+function habitView(){
+  const hp=Habits(); const date=state.habitDate; const rec=hp.records[date]||{};
+  const list = hp.defs.length? hp.defs.map(h=>{
+    const on=!!rec[h.id];
+    return `<div class="item ${on?'done':''}">
+      <input type="checkbox" ${on?'checked':''} data-action="habit-toggle" data-hid="${h.id}">
+      <span class="txt">${h.emoji||'•'} ${esc(h.name)}</span>
+      <span class="ops"><button class="iconbtn" data-action="habit-del" data-hid="${h.id}" title="删除习惯">🗑</button></span>
+    </div>`;
+  }).join('') : '<div class="empty">还没有习惯，先添加一个吧</div>';
+  // heatmap
+  const grid=daysInMonthGrid(state.heatMonth);
+  const wk=['日','一','二','三','四','五','六'];
+  let heat=`<div class="heat">`+wk.map(w=>`<div class="cell" style="background:none;color:var(--muted);font-weight:600">${w}</div>`).join('');
+  grid.forEach(dt=>{
+    if(!dt){heat+=`<div class="cell" style="background:none"></div>`;return;}
+    const ds=ymd(dt); const r=hp.records[ds]||{}; const tot=hp.defs.length;
+    let lvl=0; if(tot){const done=hp.defs.filter(h=>r[h.id]).length; const ratio=done/tot; lvl=done===0?0:ratio>=1?4:ratio>=.66?3:ratio>=.33?2:1;}
+    const dayNum=dt.getDate();
+    heat+=`<div class="cell h${lvl} ${ds===date?'sel':''}" data-action="habit-day" data-ds="${ds}">${dayNum}<span class="g">${tot&&r?hp.defs.filter(h=>r[h.id]).length:''}</span></div>`;
+  });
+  heat+=`</div>`;
+  // streak calc for selected date backwards
+  return `<div class="grid g2">
+    <div class="card">
+      <h3>✅ ${date} 习惯打卡</h3>
+      ${list}
+      <div class="addrow"><input type="text" id="new-habit" placeholder="习惯名称，如：喝水2L"><input type="text" id="new-habit-emoji" placeholder="图标emoji" style="width:80px"><button class="btn sm" data-action="habit-add">添加</button></div>
+      <div class="hint">勾选即记录当天完成。下方热力图颜色越深代表完成比例越高。</div>
+    </div>
+    <div class="card">
+      <h3>📆 ${state.heatMonth} 完成热力图</h3>
+      ${heat}
+      <div class="hint">点击某天可切换到该日打卡。连续打卡天数：<strong>${streak(hp,date)}</strong> 天</div>
+    </div>
+  </div>`;
+}
+function streak(hp,date){
+  let n=0; let cur=date;
+  // if today not all done, count until last fully-done? Simpler: count consecutive days ending at date where all habits done (or at least 1 if no habits)
+  while(true){
+    const r=hp.records[cur]||{}; const tot=hp.defs.length;
+    const done=hp.defs.filter(h=>r[h.id]).length;
+    if(tot>0 && done===tot){n++; cur=addDays(cur,-1);} else break;
+    if(cur< '2000-01-01')break;
+  }
+  return n;
+}
+function habitToggle(hid){const hp=Habits();const d=state.habitDate;(hp.records[d]=hp.records[d]||{});hp.records[d][hid]=!hp.records[d][hid];DB.set('habits',hp);render();}
+function habitAdd(){const n=$('#new-habit').value.trim();if(!n)return;const hp=Habits();hp.defs.push({id:uid(),name:n,emoji:$('#new-habit-emoji').value.trim()||'•'});DB.set('habits',hp);render();}
+function habitDel(hid){const hp=Habits();hp.defs=hp.defs.filter(h=>h.id!==hid);Object.values(hp.records).forEach(r=>delete r[hid]);DB.set('habits',hp);render();}
+
+/* ---------- health view ---------- */
+const BRISTOL=['','1型 硬球状','2型 块状','3型 裂纹条状','4型 光滑蛇状','5型 软团块','6型 糊状','7型 水样'];
+function healthView(){
+  const date=state.date; const h=Health()[date]||{sleep:{},meals:[],poop:[]};
+  const meals=(h.meals||[]).map((m,i)=>`<div class="meal"><span class="pill ${m.type==='早餐'?'green':m.type==='午餐'?'blue':m.type==='晚餐'?'warn':'gray'}">${m.type}</span><span class="txt" style="flex:1">${esc(m.content)}</span><button class="iconbtn" data-action="meal-del" data-i="${i}">🗑</button></div>`).join('') || '<div class="empty">今天还没记录饮食</div>';
+  const poops=(h.poop||[]).map((p,i)=>`<div class="meal"><span class="pill gray">${esc(p.time||'')}</span><span class="txt" style="flex:1">${BRISTOL[p.type||0]||'未记录'}</span>${p.note?`<span class="tag">${esc(p.note)}</span>`:''}<button class="iconbtn" data-action="poop-del" data-i="${i}">🗑</button></div>`).join('') || '<div class="empty">今天还没记录</div>';
+  const q=h.sleep&&h.sleep.quality?h.sleep.quality:0;
+  return `<div class="grid g2">
+    <div class="card">
+      <h3>😴 睡眠记录 · ${date}</h3>
+      <div class="row">
+        <label class="fl">入睡<input type="time" value="${h.sleep&&h.sleep.start||''}" data-store="sleep-start"></label>
+        <label class="fl">起床<input type="time" value="${h.sleep&&h.sleep.end||''}" data-store="sleep-end"></label>
+        <label class="fl">质量
+          <select data-store="sleep-quality">
+            <option value="0" ${q==0?'selected':''}>未评</option>
+            <option value="1" ${q==1?'selected':''}>差</option>
+            <option value="2" ${q==2?'selected':''}>一般</option>
+            <option value="3" ${q==3?'selected':''}>好</option>
+            <option value="4" ${q==4?'selected':''}>极好</option>
+          </select>
+        </label>
+      </div>
+      <div class="hint" id="sleep-dur"></div>
+    </div>
+    <div class="card">
+      <h3>🍽️ 饮食记录 · ${date}</h3>
+      ${meals}
+      <div class="addrow">
+        <select id="meal-type"><option>早餐</option><option>午餐</option><option>晚餐</option><option>加餐</option></select>
+        <input type="text" id="meal-content" placeholder="吃了什么…">
+        <button class="btn sm" data-action="meal-add">添加</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🚽 排便记录 · ${date}</h3>
+      ${poops}
+      <div class="addrow">
+        <input type="time" id="poop-time" value="">
+        <select id="poop-type">${BRISTOL.map((b,i)=>`<option value="${i}" ${i===4?'selected':''}>${b}</option>`).join('')}</select>
+        <input type="text" id="poop-note" placeholder="备注(可选)" style="flex:1">
+        <button class="btn sm" data-action="poop-add">添加</button>
+      </div>
+      <div class="hint">Bristol 分型：1-2 偏硬/便秘，3-4 理想，5-7 偏软/腹泻。</div>
+    </div>
+    <div class="card">
+      <h3>📈 近 7 天概览</h3>
+      ${weekHealth()}
+    </div>
+  </div>`;
+}
+function weekHealth(){
+  let rows='';
+  for(let i=6;i>=0;i--){const ds=addDays(state.date,-i);const h=Health()[ds]||{sleep:{},meals:[],poop:[]};
+    const dur=sleepDur(h.sleep);
+    rows+=`<div class="meal"><span class="pill gray">${ds.slice(5)}</span><span class="txt" style="flex:1">😴 ${dur||'—'} · 🍽️ ${(h.meals||[]).length} · 🚽 ${(h.poop||[]).length}</span></div>`;
+  }
+  return rows;
+}
+function sleepDur(s){if(!s||!s.start||!s.end)return '';const a=s.start.split(':').map(Number),b=s.end.split(':').map(Number);let mins=(b[0]*60+b[1])-(a[0]*60+a[1]);if(mins<=0)mins+=24*60;return Math.floor(mins/60)+'h'+(mins%60)+'m';}
+function healthSave(date,mut){const H=Health();const h=H[date]||{sleep:{},meals:[],poop:[]};mut(h);H[date]=h;DB.set('health',H);render();}
+
+/* ---------- media view ---------- */
+function mediaView(){
+  const m=state.month; const data=Media()[m]||{podcasts:[],shows:[]};
+  const pods=(data.podcasts||[]).map((p,i)=>podRow(p,i,'podcast')).join('')||'<div class="empty">本月还没记录播客</div>';
+  const shows=(data.shows||[]).map((p,i)=>podRow(p,i,'show')).join('')||'<div class="empty">本月还没记录影视/综艺</div>';
+  return `<div class="grid g2">
+    <div class="card">
+      <h3>🎙️ 播客记录 · ${m}</h3>
+      ${pods}
+      <div class="addrow"><input type="text" id="pod-name" placeholder="节目名"><input type="text" id="pod-ep" placeholder="期数/标题" style="flex:1"><button class="btn sm" data-action="pod-add">添加</button></div>
+    </div>
+    <div class="card">
+      <h3>🎬 影音剧记录 · ${m}</h3>
+      ${shows}
+      <div class="addrow"><input type="text" id="show-name" placeholder="剧名/综艺"><select id="show-type"><option value="剧集">剧集</option><option value="电影">电影</option><option value="综艺">综艺</option><option value="纪录片">纪录片</option></select><button class="btn sm" data-action="show-add">添加</button></div>
+    </div>
+  </div>`;
+}
+function podRow(p,i,kind){
+  const stars = '★'.repeat(p.rating||0)+'☆'.repeat(5-(p.rating||0));
+  const extra = kind==='podcast'? (p.ep?`<span class="tag">${esc(p.ep)}</span>`:'') : `<span class="pill gray">${p.type||'剧集'}</span>`;
+  return `<div class="pod">
+    <span class="txt" style="flex:1">${esc(p.name)} ${extra}${p.note?`<div class="hint">${esc(p.note)}</div>`:''}</span>
+    <span class="stars">${stars}</span>
+    <button class="iconbtn" data-action="media-del" data-kind="${kind}" data-i="${i}">🗑</button>
+  </div>`;
+}
+function mediaSave(mut){const M=Media();const d=M[state.month]||{podcasts:[],shows:[]};mut(d);M[state.month]=d;DB.set('media',M);render();}
+
+/* ---------- global events ---------- */
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-action],.nav-item,[data-view]');
+  if(!el)return;
+  const a=el.dataset.action;
+  if(el.classList.contains('nav-item')||el.dataset.view){state.view=el.dataset.view||el.dataset.view; if(state.view==='dashboard'){} render(); return;}
+  switch(a){
+    case 'plan-sub': state.planSub=el.dataset.sub; render(); break;
+    case 'review-sub': state.reviewSub=el.dataset.sub; render(); break;
+    case 'add': addGoal(el.dataset.type,el.dataset.key); break;
+    case 'toggle': toggleGoal(el.dataset.type,el.dataset.key,el.dataset.id); break;
+    case 'del': delGoal(el.dataset.type,el.dataset.key,el.dataset.id); break;
+    case 'add-proj': addProject(); break;
+    case 'open-proj': state._openProj = state._openProj===el.dataset.id?null:el.dataset.id; render(); break;
+    case 'add-task': addTask(el.dataset.pid, el.dataset.parent||null); break;
+    case 'add-sub': { const pid=el.dataset.pid,id=el.dataset.id; const inp=document.createElement('input');inp.type='text';inp.placeholder='子任务内容';inp.style.cssText='flex:1';const box=prompt('子任务内容：');if(box&&box.trim()){const projs=Projects();const p=projs.find(x=>x.id===pid);const par=findTask(p.tasks,id);(par.children=par.children||[]).push({id:uid(),text:box.trim(),done:false,children:[]});DB.set('projects',projs);render();}} break;
+    case 'toggle-task': toggleTask(el.dataset.pid,el.dataset.id); break;
+    case 'del-task': delTask(el.dataset.pid,el.dataset.id); break;
+    case 'habit-toggle': habitToggle(el.dataset.hid); break;
+    case 'habit-add': habitAdd(); break;
+    case 'habit-del': habitDel(el.dataset.hid); break;
+    case 'habit-day': state.habitDate=el.dataset.ds; render(); break;
+    case 'meal-add': {const t=$('#meal-type').value;const c=$('#meal-content').value.trim();if(!c)return;healthSave(state.date,h=>{(h.meals=h.meals||[]).push({type:t,content:c});});} break;
+    case 'meal-del': healthSave(state.date,h=>{h.meals.splice(+el.dataset.i,1);}); break;
+    case 'poop-add': {const t=$('#poop-time').value;const ty=+$('#poop-type').value;const n=$('#poop-note').value.trim();healthSave(state.date,h=>{(h.poop=h.poop||[]).push({time:t,note:n,type:ty});});} break;
+    case 'poop-del': healthSave(state.date,h=>{h.poop.splice(+el.dataset.i,1);}); break;
+    case 'pod-add': {const n=$('#pod-name').value.trim();const ep=$('#pod-ep').value.trim();if(!n)return;mediaSave(d=>{(d.podcasts=d.podcasts||[]).push({name:n,ep,rating:0,note:''});});} break;
+    case 'show-add': {const n=$('#show-name').value.trim();const ty=$('#show-type').value;if(!n)return;mediaSave(d=>{(d.shows=d.shows||[]).push({name:n,type:ty,rating:0,note:''});});} break;
+    case 'media-del': mediaSave(d=>{ if(el.dataset.kind==='podcast')d.podcasts.splice(+el.dataset.i,1); else d.shows.splice(+el.dataset.i,1);}); break;
+    case 'sync-now': doSync(true); break;
+    case 'sync-test': testConn(); break;
+    case 'export': exportData(); break;
+    case 'import': $('#importFile').click(); break;
+    case 'clear': if(confirm('确定清空全部数据？此操作不可恢复（建议先导出备份）')){localStorage.clear();toast('已清空');render();} break;
+  }
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.store==='review'){const R=Reviews();R[t.dataset.key]=t.value;DB.set('reviews',R);}
+  else if(t.dataset.store==='proj-desc'){const projs=Projects();const p=projs.find(x=>x.id===t.dataset.id);if(p){p.desc=t.value;DB.set('projects',projs);}}
+  else if(t.dataset.store==='proj-status'){const projs=Projects();const p=projs.find(x=>x.id===t.dataset.id);if(p){p.status=t.value;DB.set('projects',projs);}}
+  else if(t.dataset.store==='sleep-start'){healthSave(state.date,h=>{h.sleep=h.sleep||{};h.sleep.start=t.value;});}
+  else if(t.dataset.store==='sleep-end'){healthSave(state.date,h=>{h.sleep=h.sleep||{};h.sleep.end=t.value;});}
+  else if(t.dataset.store==='sleep-quality'){healthSave(state.date,h=>{h.sleep=h.sleep||{};h.sleep.quality=+t.value;});}
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.store==='review'){const R=Reviews();R[t.dataset.key]=t.value;DB.set('reviews',R);}
+  else if(t.dataset.store==='sleep-start'||t.dataset.store==='sleep-end'){
+    const H=Health();const h=H[state.date]||{sleep:{},meals:[],poop:[]};h.sleep=h.sleep||{};h.sleep[t.dataset.store==='sleep-start'?'start':'end']=t.value;H[state.date]=h;DB.set('health',H);
+    const dur=sleepDur(h.sleep);const el=$('#sleep-dur');if(el)el.textContent=dur?('睡眠时长：'+dur):'';
+  }
+});
+$('#importFile').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;const rd=new FileReader();
+  rd.onload=()=>{try{const obj=JSON.parse(rd.result);Object.keys(obj).forEach(k=>localStorage.setItem('lmw:'+k,JSON.stringify(obj[k])));toast('导入成功');render();}catch(err){alert('导入失败：文件格式错误');}};
+  rd.readAsText(f);
+});
+function exportData(){
+  const obj={};
+  for(let i=0;i<localStorage.length;i++){const full=localStorage.key(i);if(full&&full.indexOf('lmw:')===0&&full!=='lmw:sync'){obj[full.slice(4)]=JSON.parse(localStorage.getItem(full));}}
+  const blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='人生管理工作台-备份-'+today()+'.json';a.click();toast('已导出备份');
+}
+
+/* ---------- GitHub Gist 同步 ---------- */
+const BUCKETS=['yearPlans','monthPlans','dayPlans','projects','reviews','habits','health','media'];
+function getSync(){return DB.get('sync',{token:'',gistId:'',filename:'life-workbench.json',enabled:false,lastSync:0});}
+function saveSync(k,v){const s=getSync();s[k]=v;DB.set('sync',s);if(k!=='lastSync')scheduleSync();}
+function gistApi(path,opts,token){const headers={'Accept':'application/vnd.github+json','Content-Type':'application/json','Authorization':'Bearer '+(token||'')};const o=Object.assign({headers},opts||{});return fetch('https://api.github.com'+path,o);}
+function readAll(){const o={};BUCKETS.forEach(k=>{let def;if(k==='projects')def=[];else if(k==='habits')def={defs:[],records:{}};else def={};o[k]=DB.get(k,def);});return o;}
+function writeAll(o){BUCKETS.forEach(k=>{if(o[k]!==undefined)DB.set(k,o[k]);});}
+
+/* 双向合并：数组按 id 并集（本地优先），普通数组按内容去重，对象递归，字符串本地优先 */
+function mergeArrById(a,b){const ma=new Map(),mb=new Map();(a||[]).forEach(x=>{if(x&&x.id!=null)ma.set(x.id,x);});(b||[]).forEach(x=>{if(x&&x.id!=null)mb.set(x.id,x);});const ids=new Set([...ma.keys(),...mb.keys()]);const out=[];ids.forEach(id=>{const va=ma.get(id),vb=mb.get(id);if(va&&vb)out.push(mergeVal(va,vb));else out.push(va||vb);});return out;}
+function mergeArrPlain(a,b){const seen=new Set(),out=[];[...(b||[]),...(a||[])].forEach(x=>{const k=JSON.stringify(x);if(!seen.has(k)){seen.add(k);out.push(x);}});return out;}
+function mergeVal(a,b){
+  if(a==null)return b==null?null:b;
+  if(b==null)return a;
+  if(Array.isArray(a)||Array.isArray(b)){const A=Array.isArray(a)?a:[],B=Array.isArray(b)?b:[];const hasId=(A[0]&&A[0].id!=null)||(B[0]&&B[0].id!=null);return hasId?mergeArrById(A,B):mergeArrPlain(A,B);}
+  if(typeof a==='object'&&typeof b==='object'){const out={...b};for(const k in a)out[k]=mergeVal(a[k],b[k]);return out;}
+  return a;
+}
+async function gistFetch(){const s=getSync();if(!s.gistId)return null;const res=await gistApi('/gists/'+s.gistId,{},s.token);if(res.status===404)return 'DELETED';if(!res.ok)throw new Error('GitHub HTTP '+res.status);const j=await res.json();const f=j.files&&j.files[s.filename];return f&&f.content?JSON.parse(f.content):null;}
+async function gistCreate(data){const s=getSync();const body={description:'人生管理工作台数据备份',public:false,files:{}};body.files[s.filename]={content:JSON.stringify(data)};const res=await gistApi('/gists',{method:'POST',body:JSON.stringify(body)},s.token);if(!res.ok)throw new Error('创建 Gist 失败 HTTP '+res.status);const j=await res.json();if(!j.id)throw new Error('创建 Gist 未返回 id');const ns=getSync();ns.gistId=j.id;DB.set('sync',ns);return j.id;}
+async function gistUpdate(data){const s=getSync();const body={files:{}};body.files[s.filename]={content:JSON.stringify(data)};const res=await gistApi('/gists/'+s.gistId,{method:'PATCH',body:JSON.stringify(body)},s.token);if(!res.ok)throw new Error('更新 Gist 失败 HTTP '+res.status);}
+let syncTimer=null,syncing=false;
+function scheduleSync(){const s=getSync();if(!s.enabled||!s.token)return;if(syncTimer)clearTimeout(syncTimer);syncTimer=setTimeout(()=>{if(!syncing)doSync(false);},4000);}
+async function doSync(manual){
+  const s=getSync();if(!s.token){if(manual)toast('请先在同步设置填写 GitHub Token');return;}
+  if(syncing)return;syncing=true;
+  try{
+    const local=readAll();
+    if(!s.gistId){await gistCreate(local);const ns=getSync();ns.lastSync=Date.now();DB.set('sync',ns);if(manual)toast('☁ 已创建私有 Gist 并完成首次同步');applySyncStatus();return;}
+    let remote=await gistFetch();
+    if(remote==='DELETED'){await gistCreate(local);remote=null;}
+    const merged=remote?mergeVal(local,remote):local;merged.__syncedAt=Date.now();
+    await gistUpdate(merged);writeAll(merged);const ns=getSync();ns.lastSync=Date.now();DB.set('sync',ns);
+    if(manual)toast('☁ 同步完成');applySyncStatus();
+  }catch(e){console.error(e);if(manual)toast('同步失败：'+(e&&e.message?e.message:e));}
+  finally{syncing=false;}
+}
+async function testConn(){
+  const s=getSync();if(!s.token){toast('请先填写 GitHub Token');return;}
+  try{const res=await gistApi('/user',{},s.token);
+    if(res.ok)toast('✅ Token 有效，可尝试同步');
+    else if(res.status===401)toast('❌ Token 无效/已失效（HTTP 401）：检查是否复制完整、是否被撤销，classic token 需勾选 gist 权限');
+    else if(res.status===403)toast('❌ 无权限或被限流（HTTP 403）：确认勾选了 gist 权限，或稍后重试');
+    else if(res.status===429)toast('⏳ GitHub 限流（HTTP 429）：稍等 1 分钟再试');
+    else toast('Token 无效 HTTP '+res.status);
+  }
+  catch(e){const m=(e&&e.message)||''+(e&&e.name||'');
+    if(/Failed to fetch|NetworkError|network|timeout|Load failed/i.test(m))toast('🌐 网络无法连到 GitHub（多为网络限制/代理问题，非代码问题）：'+m);
+    else toast('连接失败：'+m);
+  }
+}
+function syncView(){
+  const s=getSync();
+  const ls=s.lastSync?new Date(s.lastSync).toLocaleString('zh-CN'):'从未同步';
+  return `<div class="grid g2">
+    <div class="card">
+      <h3>☁ GitHub 私有 Gist 同步设置</h3>
+      <label class="fl" style="margin-bottom:10px">GitHub Token（需勾选 gist 权限）
+        <input type="password" value="${esc(s.token)}" placeholder="ghp_xxx 或 github_pat_xxx" onchange="saveSync('token',this.value)"></label>
+      <label class="fl" style="margin-bottom:10px">Gist ID（留空则首次同步自动创建）
+        <input type="text" value="${esc(s.gistId)}" placeholder="首次同步后自动填入" onchange="saveSync('gistId',this.value)"></label>
+      <label class="fl" style="margin-bottom:10px">文件名
+        <input type="text" value="${esc(s.filename)}" onchange="saveSync('filename',this.value)"></label>
+      <div class="row" style="margin:6px 0 12px">
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer"><input type="checkbox" ${s.enabled?'checked':''} onchange="saveSync('enabled',this.checked)"> 自动同步（改动后 4 秒自动上传）</label>
+      </div>
+      <div class="row">
+        <button class="btn sm" data-action="sync-test">测试连接</button>
+        <button class="btn sm ghost" data-action="sync-now">立即同步</button>
+        <span class="hint" id="syncStatus">上次同步：${ls}</span>
+      </div>
+      <div class="hint" style="margin-top:12px">同步采用<strong>双向合并</strong>：两端新增内容都会保留、不互相覆盖；仅「同一项目两端同时改动」时本地优先。Token 仅存本机浏览器，导出备份时会自动排除。</div>
+    </div>
+    <div class="card">
+      <h3>📌 使用说明（三步）</h3>
+      <p class="hint"><strong>1. 生成 Token</strong>：GitHub 网页 → 右上角头像 → Settings → Developer settings → <strong>Personal access tokens → Tokens (classic)</strong> → Generate new token（或 Fine-grained）→ 只勾选 <code>gist</code> 权限 → 生成并复制（只显示一次）。</p>
+      <p class="hint"><strong>2. 填入并首次同步</strong>：把 Token 粘到左侧，点「立即同步」。应用会自动创建一个<strong>私有 Gist</strong> 并把 Gist ID 填好。手机端打开同一地址、粘贴<strong>同一个 Token</strong> 即可同步（Gist ID 会自动读取，两端无需手动一致）。</p>
+      <p class="hint"><strong>3. 自动同步</strong>：勾选「自动同步」后，任意改动 4 秒后自动上传。数据存于你自己的 GitHub 私有 Gist，仅你的 Token 可见，不上任何第三方服务器。</p>
+      <p class="hint"><strong>为什么用 Gist 而非 WebDAV</strong>：GitHub API 支持浏览器跨域（CORS），网页 / 手机浏览器可直接读写，无需自建服务器、不受网盘 CORS 限制。若你极度介意数据落第三方，可改回自托管方案。</p>
+    </div>
+  </div>`;
+}
+function applySyncStatus(){const el=$('#syncStatus');if(el){const s=getSync();el.textContent='上次同步：'+(s.lastSync?new Date(s.lastSync).toLocaleString('zh-CN'):'从未同步');}}
+
+/* ---------- PWA service worker ---------- */
+if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+  window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+/* ---------- init ---------- */
+render();
+</script>
+</body>
+</html>
