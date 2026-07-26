@@ -39,6 +39,8 @@
   /* Main */
   .main{flex:1; padding:22px 28px 60px; max-width:1100px}
   .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px}
+  .hamburger{display:none; align-items:center; justify-content:center; width:40px; height:40px; flex:0 0 auto; border:1px solid var(--line); border-radius:10px; background:#fff; font-size:20px; line-height:1; cursor:pointer; margin-right:4px}
+  .overlay{display:none}
   .topbar h1{font-size:21px; margin:0}
   .topbar .sub{color:var(--muted); font-size:13px; margin-top:2px}
   .datepick{display:flex; align-items:center; gap:8px}
@@ -56,6 +58,21 @@
   .g3{grid-template-columns:repeat(3,1fr)}
   .g4{grid-template-columns:repeat(4,1fr)}
   @media(max-width:880px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  @media(max-width:760px){
+    .app{flex-direction:column; min-height:auto}
+    .sidebar{position:fixed; left:0; top:0; bottom:0; width:80vw; max-width:300px; z-index:60; transform:translateX(-100%); transition:transform .25s ease; box-shadow:0 0 40px rgba(0,0,0,.18)}
+    .sidebar.open{transform:translateX(0)}
+    .hamburger{display:inline-flex}
+    .main{padding:14px 14px 90px; max-width:none}
+    .overlay.show{display:block; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:55}
+    .topbar{margin-bottom:14px}
+    #pageTitle{font-size:19px}
+    .card{padding:14px}
+    h3{font-size:14px}
+    .stat .num{font-size:22px}
+    .tabs{width:100%; overflow-x:auto; flex-wrap:nowrap}
+    .tabs .tab{white-space:nowrap}
+  }
   .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow)}
   .card h3{margin:0 0 12px; font-size:15px; display:flex; align-items:center; gap:8px}
   .card h3 .meta{margin-left:auto; font-weight:500; font-size:12px; color:var(--muted)}
@@ -142,6 +159,7 @@
   </aside>
   <main class="main">
     <div class="topbar">
+      <button class="hamburger" aria-label="菜单" onclick="toggleSidebar()">☰</button>
       <div>
         <h1 id="pageTitle">仪表盘</h1>
         <div class="sub" id="pageSub"></div>
@@ -151,6 +169,7 @@
     <div id="app"></div>
   </main>
 </div>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 <div class="toast" id="toast"></div>
 
@@ -592,7 +611,7 @@ document.addEventListener('click',e=>{
   const el=e.target.closest('[data-action],.nav-item,[data-view]');
   if(!el)return;
   const a=el.dataset.action;
-  if(el.classList.contains('nav-item')||el.dataset.view){state.view=el.dataset.view||el.dataset.view; if(state.view==='dashboard'){} render(); return;}
+  if(el.classList.contains('nav-item')||el.dataset.view){state.view=el.dataset.view||el.dataset.view; if(state.view==='dashboard'){} closeSidebar(); render(); return;}
   switch(a){
     case 'plan-sub': state.planSub=el.dataset.sub; render(); break;
     case 'review-sub': state.reviewSub=el.dataset.sub; render(); break;
@@ -740,6 +759,9 @@ function applySyncStatus(){const el=$('#syncStatus');if(el){const s=getSync();el
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
 }
+/* ---------- mobile drawer ---------- */
+function toggleSidebar(){const s=$('.sidebar'),o=$('#overlay');if(s&&o){s.classList.toggle('open');o.classList.toggle('show');}}
+function closeSidebar(){const s=$('.sidebar'),o=$('#overlay');if(s&&o){s.classList.remove('open');o.classList.remove('show');}}
 /* ---------- init ---------- */
 render();
 </script>

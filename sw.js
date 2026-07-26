@@ -1,5 +1,5 @@
 /* 人生管理工作台 Service Worker —— 仅缓存同源应用外壳，不缓存 GitHub API 响应 */
-const CACHE = 'lmw-v1';
+const CACHE = 'lmw-v2';
 const ASSETS = ['./', './index.html', './icon.png', './manifest.webmanifest'];
 
 self.addEventListener('install', function (e) {
@@ -21,12 +21,23 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // GitHub API 等跨域请求不拦截、不缓存
+
+  // 页面（导航请求）：在线优先拿最新，离线时回退缓存
+  if (req.mode === 'navigate') {
+    e.respondWith(
+      fetch(req).then(function (res) {
+        if (res && res.status === 200) { caches.open(CACHE).then(function (c) { c.put(req, res.clone()); }); }
+        return res;
+      }).catch(function () { return caches.match(req); })
+    );
+    return;
+  }
+
+  // 其它静态资源：缓存优先，后台刷新
   e.respondWith(
     caches.match(req).then(function (cached) {
       const net = fetch(req).then(function (res) {
-        if (res && res.status === 200) {
-          caches.open(CACHE).then(function (c) { c.put(req, res.clone()); });
-        }
+        if (res && res.status === 200) { caches.open(CACHE).then(function (c) { c.put(req, res.clone()); }); }
         return res;
       }).catch(function () { return cached; });
       return cached || net;
