@@ -222,6 +222,19 @@
     #content{padding:14px;}
     .top-title{font-size:15px;}
   }
+
+  /* ====== toast & 自定义确认弹窗（替代被 iOS PWA 禁用的 alert/confirm） ====== */
+  .toast-wrap{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);z-index:400;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:90vw;}
+  .toast{background:rgba(38,46,34,.92);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 6px 22px rgba(0,0,0,.28);animation:toastIn .22s ease;max-width:90vw;}
+  @keyframes toastIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  .modal-mask{position:fixed;inset:0;background:rgba(20,28,16,.42);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);z-index:500;display:none;align-items:center;justify-content:center;}
+  .modal-mask.show{display:flex;}
+  .modal{background:rgba(255,255,255,.72);backdrop-filter:blur(20px) saturate(160%);-webkit-backdrop-filter:blur(20px) saturate(160%);border:1px solid rgba(255,255,255,.85);box-shadow:0 14px 44px rgba(60,80,50,.32);border-radius:18px;padding:22px 20px;width:min(86vw,320px);text-align:center;}
+  .modal .m-msg{font-size:15px;line-height:1.5;margin-bottom:18px;color:#2A3326;}
+  .modal .m-btns{display:flex;gap:10px;}
+  .modal .m-btns button{flex:1;padding:10px 0;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;}
+  .modal .m-yes{background:linear-gradient(135deg,var(--green),var(--green-d));color:#fff;}
+  .modal .m-no{background:rgba(255,255,255,.65);color:#4A7042;border:1px solid rgba(127,168,116,.5);}
 </style>
 </head>
 <body>
@@ -334,12 +347,13 @@ const DEFAULT_SKILLS={
   }
 };
 
-const Skills=()=>DB.get('skills',JSON.parse(JSON.stringify(DEFAULT_SKILLS)));
+let _skillsCache=null;
+const Skills=()=>{ if(_skillsCache)return _skillsCache; _skillsCache=DB.get('skills',JSON.parse(JSON.stringify(DEFAULT_SKILLS))); return _skillsCache; };
 const QuickTasks=()=>DB.get('quick_tasks',{});  // {date:[{id,text,skill,done,est_min}]}
 const Ideas=()=>DB.get('ideas',[]);
 const Settings=()=>DB.get('settings',{gistId:'',token:''});
 
-function saveSkills(v){DB.set('skills',v);}
+function saveSkills(v){ _skillsCache=v; DB.set('skills',v); }
 function saveQuickTasks(v){DB.set('quick_tasks',v);}
 function saveIdeas(v){DB.set('ideas',v);}
 function saveSettings(v){DB.set('settings',v);}
@@ -529,7 +543,10 @@ function pageHome(){
   let html='';
   html+=`<div class="card"><div class="date-hero">${t} · ${jsWeekDay(t)}<span class="big">今日概览</span></div></div>`;
 
-  // 今日计划（统一呈现）
+  // 左右两列：今日计划（左） + 临时灵感（右）
+  html+=`<div class="grid2">`;
+
+  // —— 左列：今日计划（统一呈现） ——
   html+=`<div class="card"><div class="card-h">${icon('clipboard',18)} 今日计划 <span class="sub">${doneToday}/${totalToday} · ${pct}%</span><span class="right"><button class="btn sm ghost" data-act="add-quick">${icon('plus',14)} 快速添加</button></span></div>`;
   if(todayAll.length===0){
     html+=`<div class="empty-tip">今天还没有计划任务<br><span class="small">去各技能页把任务标记为"今日"，或点右上角快速添加</span></div>`;
@@ -563,6 +580,13 @@ function pageHome(){
   }
   html+=`</div>`;
 
+  // —— 右列：临时灵感 ——
+  html+=`<div class="card"><div class="card-h">${icon('bulb',18)} 临时灵感</div>
+    <textarea class="idea-box" id="ideaInput" placeholder="随手记，回车或失焦保存…"></textarea>
+    <div class="idea-list" id="ideaList"></div></div>`;
+
+  html+=`</div>`; // end grid2
+
   // 四技能进度卡片
   html+='<div class="grid4">';
   Object.keys(SKILL_DEFS).forEach(k=>{
@@ -574,11 +598,6 @@ function pageHome(){
     </div>`;
   });
   html+='</div>';
-
-  // 临时灵感
-  html+=`<div class="card"><div class="card-h">${icon('bulb',18)} 临时灵感</div>
-    <textarea class="idea-box" id="ideaInput" placeholder="随手记，回车或失焦保存…"></textarea>
-    <div class="idea-list" id="ideaList"></div></div>`;
 
   return html;
 }
@@ -595,18 +614,9 @@ function pageSkill(skillKey){
   html+=`<div class="card"><div class="card-h">${icon(def.icon,20)} ${def.name} 学习 <span class="sub">总进度 ${p.done}/${p.total} · ${p.pct}%</span></div>
     <div class="bar"><i style="width:${p.pct}%"></i></div></div>`;
 
-  // 新增目标表单
-  html+=`<div class="add-form" id="goalAddForm">
-    <div class="card-h" style="margin-bottom:8px">${icon('plus',18)} 新增学习目标</div>
-    <div class="field"><label>目标标题 *</label><input class="inp" id="goalTitle" placeholder="例如：掌握手机延时摄影"></div>
-    <div class="field"><label>为什么学这个（动机）</label><textarea class="tar" id="goalWhy" placeholder="明确动机能让坚持更有方向…"></textarea></div>
-    <div class="row"><div class="field"><label>截止日期（可选）</label><input class="inp" id="goalDeadline" type="date"></div>
-    <div class="field" style="display:flex;align-items:flex-end"><button class="btn" data-act="add-goal" data-arg="${skillKey}">添加目标</button></div></div>
-  </div>`;
-
-  // 目标列表
+  // 目标列表（先显示已有目标，由自己来建计划和分解）
   if(goals.length===0){
-    html+=`<div class="card"><div class="empty-tip">还没有学习目标<br><span class="small">从上方添加你的第一个目标</span></div></div>`;
+    html+=`<div class="card"><div class="empty-tip">还没有学习目标<br><span class="small">在下方新增你的第一个目标</span></div></div>`;
   } else {
     goals.forEach(g=>{
       const gp=goalProgress(g);
@@ -645,17 +655,30 @@ function pageSkill(skillKey){
           <input class="inp" id="taskEta-${g.id}" placeholder="分钟" style="flex:0 0 80px" inputmode="numeric">
           <button class="btn sm" data-act="add-task" data-arg="${skillKey}|${g.id}">添加任务</button>
         </div>
-        <div style="margin-top:10px"><button class="btn sm ghost" data-act="archive-goal" data-arg="${skillKey}|${g.id}">归档目标</button></div>
+        <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap">
+          <button class="btn sm ghost" data-act="edit-goal" data-arg="${skillKey}|${g.id}">${icon('edit',13)} 编辑</button>
+          <button class="btn sm ghost" data-act="archive-goal" data-arg="${skillKey}|${g.id}">${icon('archive',13)} 归档</button>
+          <button class="btn sm danger" data-act="del-goal" data-arg="${skillKey}|${g.id}">${icon('trash',13)} 删除</button>
+        </div>
       </div></div>`;
     });
   }
+
+  // 新增目标表单（放在目标列表下方）
+  html+=`<div class="add-form" id="goalAddForm">
+    <div class="card-h" style="margin-bottom:8px">${icon('plus',18)} 新增学习目标</div>
+    <div class="field"><label>目标标题 *</label><input class="inp" id="goalTitle" placeholder="例如：掌握手机延时摄影"></div>
+    <div class="field"><label>为什么学这个（动机）</label><textarea class="tar" id="goalWhy" placeholder="明确动机能让坚持更有方向…"></textarea></div>
+    <div class="row"><div class="field"><label>截止日期（可选）</label><input class="inp" id="goalDeadline" type="date"></div>
+    <div class="field" style="display:flex;align-items:flex-end"><button class="btn" data-act="add-goal" data-arg="${skillKey}">添加目标</button></div></div>
+  </div>`;
 
   return html;
 }
 
 function addGoal(skillKey){
   const title=document.getElementById('goalTitle').value.trim();
-  if(!title){alert('请填写目标标题');return;}
+  if(!title){toast('请填写目标标题');return;}
   const why=document.getElementById('goalWhy').value.trim();
   const deadline=document.getElementById('goalDeadline').value;
   const sk=Skills(); if(!sk[skillKey])sk[skillKey]={goals:[]};
@@ -664,10 +687,50 @@ function addGoal(skillKey){
 }
 function toggleGoal(goalId){ state.openGoals[goalId]=!state.openGoals[goalId]; render(); }
 function archiveGoal(skillKey,goalId){
-  if(!confirm('归档此目标？归档后可在同步设置中查看，但不再显示在学习页。'))return;
-  const sk=Skills(); const goals=sk[skillKey].goals;
-  const i=goals.findIndex(g=>g.id===goalId);
-  if(i>=0){ goals[i].archived=true; saveSkills(sk); render(); }
+  confirmDialog('归档此目标？归档后可在同步设置中查看，但不再显示在学习页。', ()=>{
+    const sk=Skills(); const goals=sk[skillKey].goals;
+    const i=goals.findIndex(g=>g.id===goalId);
+    if(i>=0){ goals[i].archived=true; saveSkills(sk); render(); }
+  });
+}
+// 编辑目标：玻璃弹窗预填标题/动机/截止日期并保存
+function editGoal(skillKey,goalId){
+  const g=findGoal(skillKey,goalId); if(!g)return;
+  let mask=document.getElementById('modalMask');
+  if(!mask){ mask=document.createElement('div'); mask.id='modalMask'; mask.className='modal-mask'; document.body.appendChild(mask); }
+  mask.innerHTML=`<div class="modal" style="width:min(90vw,360px);text-align:left">
+    <div class="card-h" style="margin-bottom:10px">${icon('edit',18)} 编辑目标</div>
+    <div class="field"><label>目标标题 *</label><input class="inp" id="egTitle" value="${esc(g.title)}"></div>
+    <div class="field"><label>为什么学这个（动机）</label><textarea class="tar" id="egWhy">${esc(g.why||'')}</textarea></div>
+    <div class="field"><label>截止日期（可选）</label><input class="inp" id="egDeadline" type="date" value="${esc(g.deadline||'')}"></div>
+    <div class="m-btns" style="margin-top:6px">
+      <button class="m-no" type="button" data-close>取消</button>
+      <button class="m-yes" type="button" data-save>保存</button>
+    </div>
+  </div>`;
+  mask.classList.add('show');
+  const close=()=>mask.classList.remove('show');
+  mask.querySelector('[data-close]').onclick=close;
+  mask.onclick=e=>{ if(e.target===mask) close(); };
+  mask.querySelector('[data-save]').onclick=()=>{
+    const title=document.getElementById('egTitle').value.trim();
+    if(!title){ toast('请填写目标标题'); return; }
+    const why=document.getElementById('egWhy').value.trim();
+    const deadline=document.getElementById('egDeadline').value;
+    const sk=Skills(); const gg=findGoal(skillKey,goalId);
+    if(gg){ gg.title=title; gg.why=why; gg.deadline=deadline; saveSkills(sk); }
+    close(); render();
+  };
+}
+// 删除目标：硬删除（含其下所有任务），不可恢复
+function delGoal(skillKey,goalId){
+  const g=findGoal(skillKey,goalId);
+  const title=g?g.title:'';
+  confirmDialog('确定删除目标「'+esc(title)+'」？删除后其下所有任务一并移除，不可恢复。', ()=>{
+    const sk=Skills();
+    sk[skillKey].goals=(sk[skillKey].goals||[]).filter(x=>x.id!==goalId);
+    saveSkills(sk); render();
+  });
 }
 function addTask(skillKey,goalId){
   const txt=document.getElementById('taskText-'+goalId).value.trim();
@@ -685,9 +748,10 @@ function toggleToday(skillKey,goalId,taskId){
   if(t){ t.today=!t.today; saveSkills(sk); render(); }
 }
 function delTask(skillKey,goalId,taskId){
-  if(!confirm('删除此任务？'))return;
-  const sk=Skills(); const g=findGoal(skillKey,goalId);
-  if(g){ g.tasks=(g.tasks||[]).filter(t=>t.id!==taskId); saveSkills(sk); render(); }
+  confirmDialog('删除此任务？', ()=>{
+    const sk=Skills(); const g=findGoal(skillKey,goalId);
+    if(g){ g.tasks=(g.tasks||[]).filter(t=>t.id!==taskId); saveSkills(sk); render(); }
+  });
 }
 function toggleTodayTask(skillKey,goalId,taskId){
   // 概览页点击今日任务 -> 标记完成
@@ -798,6 +862,25 @@ function pageSync(){
   return html;
 }
 
+/* ============ toast & 自定义确认弹窗（替代 iOS PWA 被禁用的 alert/confirm） ============ */
+function toast(msg){
+  let w=document.getElementById('toastWrap');
+  if(!w){ w=document.createElement('div'); w.id='toastWrap'; w.className='toast-wrap'; document.body.appendChild(w); }
+  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  w.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 2200);
+}
+function confirmDialog(msg, onYes){
+  let mask=document.getElementById('modalMask');
+  if(!mask){ mask=document.createElement('div'); mask.id='modalMask'; mask.className='modal-mask'; document.body.appendChild(mask); }
+  mask.innerHTML=`<div class="modal"><div class="m-msg">${esc(msg)}</div><div class="m-btns"><button class="m-no" type="button">取消</button><button class="m-yes" type="button">确认</button></div></div>`;
+  mask.classList.add('show');
+  const close=()=>mask.classList.remove('show');
+  mask.querySelector('.m-no').onclick=close;
+  mask.querySelector('.m-yes').onclick=()=>{ close(); onYes(); };
+  mask.onclick=e=>{ if(e.target===mask) close(); };
+}
+
 /* ============ 主渲染 ============ */
 function render(){
   document.getElementById('nav').innerHTML=sidebarHTML();
@@ -823,6 +906,8 @@ const H={
   'nav':(arg)=>{ state.page=arg; state.skill=arg in SKILL_DEFS?arg:state.skill; document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('show'); state.openGoals={}; render(); window.scrollTo(0,0); },
   'toggle-goal':(arg)=>toggleGoal(arg),
   'add-goal':(arg)=>addGoal(arg),
+  'edit-goal':(arg)=>{const [sk,gid]=arg.split('|'); editGoal(sk,gid);},
+  'del-goal':(arg)=>{const [sk,gid]=arg.split('|'); delGoal(sk,gid);},
   'archive-goal':(arg)=>{const [sk,gid]=arg.split('|'); archiveGoal(sk,gid);},
   'add-task':(arg)=>{const [sk,gid]=arg.split('|'); addTask(sk,gid);},
   'toggle-task':(arg)=>{const [sk,gid,tid]=arg.split('|'); toggleTask(sk,gid,tid);},
@@ -855,7 +940,8 @@ document.addEventListener('click',e=>{
 });
 
 render();
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+// 注销可能残留的 Service Worker，避免旧缓存拦截页面（本应用走网络最新版）
+if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{}); }
 </script>
 </body>
 </html>
