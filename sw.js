@@ -1,4 +1,4 @@
-const CACHE = 'lmw-v5';
+const CACHE = 'lmw-v8';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.png', './sw.js'];
 
 self.addEventListener('install', e => {

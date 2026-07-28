@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#7FA874">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon.png">
 <title>技能学习台</title>
 <style>
   :root{
@@ -202,8 +201,13 @@
   .g-icon .ico{opacity:.6;}
   .g-arrow .ico{opacity:.7;}
   .goal-why .ico{opacity:.7; vertical-align:-3px;}
-  .t-del,.st-del,.idea-item .x{display:flex;align-items:center;}
+  .t-del,.st-del,.idea-item .x,.t-move,.st-move,.g-move{display:flex;align-items:center;}
+  .t-move,.st-move,.g-move{padding:3px 4px; cursor:pointer; border-radius:6px; transition:background .15s;}
+  .t-move:hover,.st-move:hover,.g-move:hover{background:rgba(255,255,255,.45);}
   .t-del .ico,.st-del .ico{opacity:.55;}
+  /* 箭头图标禁用指针事件，确保点击永远落在按钮 span 上，避免 iOS 上点不动 */
+  .t-move .ico,.st-move .ico,.g-move .ico{pointer-events:none; opacity:.4; transition:opacity .15s;}
+  .t-move:hover .ico,.st-move:hover .ico,.g-move:hover .ico{opacity:.9;}
   .idea-item .x .ico{opacity:.6;}
   .brand .logo .ico{opacity:.88;}
   .btn .ico{opacity:.95; vertical-align:-2px;}
@@ -469,7 +473,9 @@ const ICONS={
   chevron:'<path d="M9.5 6l6 6-6 6"/>',
   menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
   x:'<path d="M6 6l12 12M18 6L6 18"/>',
-  archive:'<rect x="4" y="4" width="16" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>'
+  archive:'<rect x="4" y="4" width="16" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/>',
+  up:'<path d="M6 14l6-6 6 6"/>',
+  down:'<path d="M6 10l6 6 6-6"/>'
 };
 function icon(name,size){
   const s=size||18;
@@ -505,7 +511,15 @@ function pageHome(){
   const t=today();
   const tt=todayTasksFlat(); // 技能今日任务
   const qt=(QuickTasks()[t]||[]).filter(x=>!x.done); // 今日快速任务
-  const todayAll=[...tt.map(x=>({type:'skill',...x})), ...qt.map(x=>({type:'quick',...x}))];
+  const todayAll=[...tt.map(x=>({type:'skill',planId:x.skill+'|'+x.goalId+'|'+x.task.id,...x})), ...qt.map(x=>({type:'quick',planId:'q|'+x.id,...x}))];
+  // 按今日计划自定义顺序排序
+  const torder=getTodayPlanOrder(t);
+  todayAll.sort((a,b)=>{
+    const ia=torder.indexOf(a.planId), ib=torder.indexOf(b.planId);
+    if(ia===-1&&ib===-1)return 0;
+    if(ia===-1)return 1; if(ib===-1)return -1;
+    return ia-ib;
+  });
   const todayDone=[...(QuickTasks()[t]||[]).filter(x=>x.done).map(x=>({type:'quick',...x})), ...allTasksFlat().filter(x=>x.task.today&&x.task.done).map(x=>({type:'skill',...x}))];
   const totalToday=todayAll.length+todayDone.length;
   const doneToday=todayDone.length;
@@ -527,6 +541,8 @@ function pageHome(){
           <div class="t-name">${esc(x.task.text)}</div>
           <span class="tag ${def.cls}">${def.name}</span>
           ${x.task.est_min?`<span class="t-eta">${x.task.est_min}分</span>`:''}
+          <span class="t-move" data-act="move-today" data-arg="${x.planId}" data-dir="up">${icon('up',14)}</span>
+          <span class="t-move" data-act="move-today" data-arg="${x.planId}" data-dir="down">${icon('down',14)}</span>
         </div>`;
       } else {
         const def=x.skill?SKILL_DEFS[x.skill]:null;
@@ -537,6 +553,8 @@ function pageHome(){
           <div class="t-name">${esc(x.text)}</div>
           <span class="tag ${cls}">${nm}</span>
           ${x.est_min?`<span class="t-eta">${x.est_min}分</span>`:''}
+          <span class="t-move" data-act="move-today" data-arg="${x.planId}" data-dir="up">${icon('up',14)}</span>
+          <span class="t-move" data-act="move-today" data-arg="${x.planId}" data-dir="down">${icon('down',14)}</span>
           <span class="t-del" data-act="del-quick" data-arg="${x.id}">${icon('trash',15)}</span>
         </div>`;
       }
@@ -599,6 +617,8 @@ function pageSkill(skillKey){
           <span class="g-icon">${icon(def.icon,18)}</span>
           <span class="g-title">${esc(g.title)}</span>
           <span class="g-meta">${(g.tasks||[]).filter(t=>t.done).length}/${(g.tasks||[]).length}${dl}</span>
+          <span class="g-move" data-act="move-goal" data-arg="${skillKey}|${g.id}|up" title="上移项目">${icon('up',14)}</span>
+          <span class="g-move" data-act="move-goal" data-arg="${skillKey}|${g.id}|down" title="下移项目">${icon('down',14)}</span>
         </div>
         <div class="goal-body">
           ${g.why?`<div class="goal-why">${icon('target',16)} ${esc(g.why)}</div>`:''}
@@ -614,6 +634,8 @@ function pageSkill(skillKey){
           <div class="st-name">${esc(t.text)}</div>
           ${t.est_min?`<span class="t-eta">${t.est_min}分</span>`:''}
           <span class="t-today ${t.today?'on':''}" data-act="toggle-today" data-arg="${skillKey}|${g.id}|${t.id}">${t.today?'今日':'加入今日'}</span>
+          <span class="st-move" data-act="move-task" data-arg="${skillKey}|${g.id}|${t.id}|up">${icon('up',14)}</span>
+          <span class="st-move" data-act="move-task" data-arg="${skillKey}|${g.id}|${t.id}|down">${icon('down',14)}</span>
           <span class="st-del" data-act="del-task" data-arg="${skillKey}|${g.id}|${t.id}">${icon('trash',15)}</span>
         </div>`;
       });
@@ -670,6 +692,43 @@ function toggleTodayTask(skillKey,goalId,taskId){
   // 概览页点击今日任务 -> 标记完成
   const sk=Skills(); const t=findTask(skillKey,goalId,taskId);
   if(t){ t.done=!t.done; if(t.done)t.today=false; saveSkills(sk); render(); }
+}
+// 任务排序：技能页目标内任务上下移
+function moveTask(skillKey,goalId,taskId,dir){
+  const sk=Skills(); const g=findGoal(skillKey,goalId); if(!g)return;
+  const ts=g.tasks||[]; const i=ts.findIndex(t=>t.id===taskId); if(i<0)return;
+  const j= dir==='up'? i-1 : i+1;
+  if(j<0||j>=ts.length)return;
+  const tmp=ts[i]; ts[i]=ts[j]; ts[j]=tmp;
+  saveSkills(sk); render();
+}
+// 目标（项目）排序：技能页内目标上下移
+function moveGoal(skillKey,goalId,dir){
+  const sk=Skills(); const goals=(sk[skillKey]&&sk[skillKey].goals)||[];
+  const i=goals.findIndex(g=>g.id===goalId); if(i<0)return;
+  const j= dir==='up'? i-1 : i+1;
+  if(j<0||j>=goals.length)return;
+  const tmp=goals[i]; goals[i]=goals[j]; goals[j]=tmp;
+  saveSkills(sk); render();
+}
+// 今日计划自定义顺序（按日期存 id 列表）
+function getTodayPlanOrder(date){ const TP=DB.get('today_plan',{}); return TP[date]||[]; }
+function setTodayPlanOrder(date,ids){ const TP=DB.get('today_plan',{}); TP[date]=ids; DB.set('today_plan',TP); }
+function moveTodayTask(planId,dir){
+  const d=today();
+  // 构建当前今日任务的完整 planId 列表（实际显示顺序：order 优先 + 未记录的按原序补齐）
+  const tt=todayTasksFlat().map(x=>x.skill+'|'+x.goalId+'|'+x.task.id);
+  const qt=(QuickTasks()[d]||[]).filter(x=>!x.done).map(x=>'q|'+x.id);
+  const all=[...tt, ...qt];
+  const order=getTodayPlanOrder(d);
+  const ordered=[];
+  order.forEach(id=>{ if(all.includes(id) && !ordered.includes(id)) ordered.push(id); });
+  all.forEach(id=>{ if(!ordered.includes(id)) ordered.push(id); });
+  const i=ordered.indexOf(planId); if(i<0)return;
+  const j= dir==='up'? i-1 : i+1;
+  if(j<0||j>=ordered.length)return;
+  ordered.splice(i,1); ordered.splice(j,0,planId);
+  setTodayPlanOrder(d,ordered); render();
 }
 
 /* ============ 快速任务（概览页） ============ */
@@ -769,6 +828,9 @@ const H={
   'toggle-today':(arg)=>{const [sk,gid,tid]=arg.split('|'); toggleToday(sk,gid,tid);},
   'toggle-today-task':(arg)=>{const [sk,gid,tid]=arg.split('|'); toggleTodayTask(sk,gid,tid);},
   'del-task':(arg)=>{const [sk,gid,tid]=arg.split('|'); delTask(sk,gid,tid);},
+  'move-task':(arg)=>{const p=arg.split('|'); moveTask(p[0],p[1],p[2],p[3]);},
+  'move-goal':(arg)=>{const p=arg.split('|'); moveGoal(p[0],p[1],p[2]);},
+  'move-today':(arg,t)=>moveTodayTask(arg,t.dataset.dir),
   'add-quick':showQuickAddForm,
   'save-quick':()=>{
     const text=document.getElementById('qtText').value.trim(); if(!text)return;
@@ -792,13 +854,7 @@ document.addEventListener('click',e=>{
 });
 
 render();
-</script>
-<script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load', function(){
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
-  });
-}
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 </script>
 </body>
 </html>
