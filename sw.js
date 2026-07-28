@@ -1,46 +1,20 @@
-/* 人生管理工作台 Service Worker —— 仅缓存同源应用外壳，不缓存 GitHub API 响应 */
-const CACHE = 'lmw-v2';
-const ASSETS = ['./', './index.html', './icon.png', './manifest.webmanifest'];
+const CACHE = 'lmw-v5';
+const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.png', './sw.js'];
 
-self.addEventListener('install', function (e) {
-  e.waitUntil(
-    caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }).then(function () { return self.skipWaiting(); })
-  );
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {})).then(() => self.skipWaiting()));
 });
 
-self.addEventListener('activate', function (e) {
-  e.waitUntil(
-    caches.keys().then(function (keys) {
-      return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
-    }).then(function () { return self.clients.claim(); })
-  );
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
-self.addEventListener('fetch', function (e) {
-  const req = e.request;
-  if (req.method !== 'GET') return;
-  const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return; // GitHub API 等跨域请求不拦截、不缓存
-
-  // 页面（导航请求）：在线优先拿最新，离线时回退缓存
-  if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req).then(function (res) {
-        if (res && res.status === 200) { caches.open(CACHE).then(function (c) { c.put(req, res.clone()); }); }
-        return res;
-      }).catch(function () { return caches.match(req); })
-    );
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  if (url.origin !== location.origin) return; // 跨域（如 Gist API）走网络
+  if (e.request.mode === 'navigate') {
+    e.respondWith(fetch(e.request).then(r => { caches.open(CACHE).then(c => c.put('./index.html', r.clone())); return r; }).catch(() => caches.match('./index.html')));
     return;
   }
-
-  // 其它静态资源：缓存优先，后台刷新
-  e.respondWith(
-    caches.match(req).then(function (cached) {
-      const net = fetch(req).then(function (res) {
-        if (res && res.status === 200) { caches.open(CACHE).then(function (c) { c.put(req, res.clone()); }); }
-        return res;
-      }).catch(function () { return cached; });
-      return cached || net;
-    })
-  );
+  e.respondWith(caches.match(e.request).then(cached => cached || fetch(e.request).then(r => { const cp = r.clone(); caches.open(CACHE).then(c => c.put(e.request, cp)); return r; }).catch(() => cached)));
 });

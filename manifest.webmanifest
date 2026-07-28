@@ -1,14 +1,19 @@
 {
-  "name": "人生管理工作台",
-  "short_name": "人生管理",
-  "description": "年/月/日计划、项目分解、复盘、习惯打卡、健康与影音记录",
-  "start_url": ".",
-  "scope": ".",
+  "name": "技能学习台",
+  "short_name": "技能学习",
+  "description": "毛玻璃拟态风技能学习台：AI、拍摄、剪辑、自媒体四象限目标拆解与每日计划",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f5f7f6",
-  "theme_color": "#2f9e8f",
+  "background_color": "#E9EFE5",
+  "theme_color": "#7FA874",
   "icons": [
-    { "src": "icon.png", "sizes": "512x512", "type": "image/png" }
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
