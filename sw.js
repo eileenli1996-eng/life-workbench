@@ -1,5 +1,5 @@
-const CACHE = 'lmw-v9';
-const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.png', './sw.js'];
+const CACHE = 'lmw-v10';
+const ASSETS = ['./', './index.html', './manifest.webmanifest', './apple-touch-icon.png', './sw.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {})).then(() => self.skipWaiting()));
